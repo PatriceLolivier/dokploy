@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { GithubIcon } from "@/components/icons/data-tools-icons";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,13 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { authClient } from "@/lib/auth-client";
 import { api } from "@/utils/api";
@@ -20,6 +28,10 @@ export const AddGithubProvider = () => {
 	const { data: activeOrganization } = authClient.useActiveOrganization();
 	const { data: session } = authClient.useSession();
 	const { data } = api.user.get.useQuery();
+	const { data: githubOrganizations, isLoading: isLoadingOrgs } =
+		api.user.getGithubOrganizations.useQuery(undefined, {
+			enabled: isOpen,
+		});
 	const [manifest, setManifest] = useState("");
 	const [isOrganization, setIsOrganization] = useState(false);
 	const [organizationName, setOrganization] = useState("");
@@ -88,11 +100,49 @@ export const AddGithubProvider = () => {
 								</div>
 
 								{isOrganization && (
-									<Input
-										required
-										placeholder="Organization name"
-										onChange={(e) => setOrganization(e.target.value)}
-									/>
+									<>
+										{isLoadingOrgs ? (
+											<div className="flex items-center gap-2">
+												<Loader2 className="h-4 w-4 animate-spin" />
+												<span className="text-sm text-muted-foreground">
+													Loading organizations...
+												</span>
+											</div>
+										) : githubOrganizations &&
+										  githubOrganizations.length > 0 ? (
+											<Select
+												value={organizationName}
+												onValueChange={setOrganization}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="Select an organization" />
+												</SelectTrigger>
+												<SelectContent>
+													{githubOrganizations.map((org) => (
+														<SelectItem key={org.id} value={org.login}>
+															<div className="flex items-center gap-2">
+																{org.avatarUrl && (
+																	<img
+																		src={org.avatarUrl}
+																		alt={org.login}
+																		className="h-5 w-5 rounded-full"
+																	/>
+																)}
+																<span>{org.login}</span>
+															</div>
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										) : (
+											<Input
+												required
+												placeholder="Organization name"
+												value={organizationName}
+												onChange={(e) => setOrganization(e.target.value)}
+											/>
+										)}
+									</>
 								)}
 							</div>
 							<form

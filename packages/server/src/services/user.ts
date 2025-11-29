@@ -1,7 +1,8 @@
 import { db } from "@dokploy/server/db";
-import { apikey, member, user } from "@dokploy/server/db/schema";
+import { account, apikey, member, user } from "@dokploy/server/db/schema";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
+import { Octokit } from "octokit";
 import { auth } from "../lib/auth";
 
 export type User = typeof user.$inferSelect;
@@ -456,4 +457,34 @@ export const createApiKey = async (
 			.where(eq(apikey.id, apiKey.id));
 	}
 	return apiKey;
+};
+
+export const getUserGithubOrganizations = async (userId: string) => {
+	// Get the user's GitHub account with access token
+	const githubAccount = await db.query.account.findFirst({
+		where: and(eq(account.userId, userId), eq(account.providerId, "github")),
+	});
+
+	if (!githubAccount?.accessToken) {
+		return [];
+	}
+
+	const octokit = new Octokit({
+		auth: githubAccount.accessToken,
+	});
+
+	try {
+		// Get user's organizations
+		const { data: orgs } = await octokit.rest.orgs.listForAuthenticatedUser();
+
+		return orgs.map((org) => ({
+			id: org.id,
+			login: org.login,
+			avatarUrl: org.avatar_url,
+			description: org.description,
+		}));
+	} catch (error) {
+		console.error("Error fetching GitHub organizations:", error);
+		return [];
+	}
 };

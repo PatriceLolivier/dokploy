@@ -6,6 +6,7 @@ import {
 	findUserById,
 	getDokployUrl,
 	getUserByToken,
+	getUserGithubOrganizations,
 	IS_CLOUD,
 	removeUserById,
 	sendEmailNotification,
@@ -393,6 +394,10 @@ export const userRouter = createTRPCRouter({
 
 			return organizations.length;
 		}),
+	getGithubOrganizations: protectedProcedure.query(async ({ ctx }) => {
+		return await getUserGithubOrganizations(ctx.user.id);
+	}),
+
 	sendInvitation: adminProcedure
 		.input(
 			z.object({
